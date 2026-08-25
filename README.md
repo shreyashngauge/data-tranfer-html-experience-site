@@ -10,8 +10,8 @@ This component renders a simple card UI that shows the Account Id once it has be
 
 | State | Condition | What's shown |
 |---|---|---|
-| Waiting | `receivedValue` is falsy | "Waiting for Account Id..." message |
-| Received | `receivedValue` is truthy | Account Id value + a success confirmation message |
+| Waiting | `receivedValue` is falsy | "Waiting for Account Data..." message |
+| Received | `receivedValue` is truthy | Account Data value + a success confirmation message |
 
 ## Template Structure
 
