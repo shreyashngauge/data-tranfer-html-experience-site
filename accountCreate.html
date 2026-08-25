@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Salesforce Account</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0176d3 0%, #0b5cab 50%, #032d60 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px
+        }
+
+        .card {
+            background: #fff;
+            width: 100%;
+            max-width: 420px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+            overflow: hidden
+        }
+
+        .header {
+            background: #032d60;
+            color: #fff;
+            text-align: center;
+            padding: 24px 16px
+        }
+
+        .header h1 {
+            font-size: 23px
+        }
+
+        .header p {
+            font-size: 13px;
+            opacity: .9;
+            margin-top: 5px
+        }
+
+        .icon {
+            font-size: 34px;
+            margin-bottom: 6px
+        }
+
+        form {
+            padding: 24px
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #032d60;
+            margin-bottom: 6px;
+            margin-top: 16px
+        }
+
+        label:first-of-type {
+            margin-top: 0
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 11px 12px;
+            border: 2px solid #d8dde6;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            background: #fff
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #0176d3
+        }
+
+        button {
+            width: 100%;
+            margin-top: 22px;
+            padding: 13px;
+            background: #0176d3;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer
+        }
+
+        button:hover {
+            background: #0b5cab
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed
+        }
+
+        .status {
+            margin-top: 14px;
+            font-size: 14px;
+            text-align: center;
+            min-height: 18px
+        }
+
+        .status.success {
+            color: #2e844a
+        }
+
+        .status.error {
+            color: #ba0517
+        }
+
+        .record-box {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f3f9ff;
+            border: 1px solid #b8d8f5;
+            border-radius: 8px
+        }
+
+        .record-box.show {
+            display: block
+        }
+
+        .record-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px
+        }
+
+        .record-id {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0176d3;
+            word-break: break-all
+        }
+
+        .site-status {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: #eef7ff;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 13px;
+            color: #0176d3
+        }
+
+        .site-status.show {
+            display: block
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="header">
+            <div class="icon">🏢</div>
+            <h1>Create Salesforce Account</h1>
+            <p>External HTML → Salesforce Apex REST</p>
+        </div>
+        <form id="accountForm">
+            <label for="accountName">Account Name</label>
+            <input type="text" id="accountName" placeholder="Enter account name" required>
+            <label for="industry">Industry</label>
+            <select id="industry" required>
+                <option value="">Select Industry</option>
+                <option value="Technology">Technology</option>
+                <option value="Finance">Finance</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Education">Education</option>
+                <option value="Retail">Retail</option>
+                <option value="Manufacturing">Manufacturing</option>
+            </select>
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone" placeholder="Enter phone number">
+            <button type="button" id="submitBtn">Create Account</button>
+            <div class="status" id="statusMsg"></div>
+            <div class="site-status" id="siteStatus">Experience Site opened. Waiting for Experience Site...</div>
+            <div class="record-box" id="recordBox">
+                <div class="record-label">Created Salesforce Account Id</div>
+                <div class="record-id" id="recordId"></div>
+            </div>
+        </form>
+    </div>
+    <script>
+        const form = document.getElementById('accountForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusMsg = document.getElementById('statusMsg');
+        const recordBox = document.getElementById('recordBox');
+        const recordIdElement = document.getElementById('recordId');
+        const siteStatus = document.getElementById('siteStatus');
+
+        const SF_TOKEN_ENDPOINT = "https://orgfarm-f6666eabf2-dev-ed.develop.my.salesforce.com/services/oauth2/token";
+        const SF_ENDPOINT = "https://orgfarm-f6666eabf2-dev-ed.develop.my.salesforce.com/services/apexrest/externalAccount/";
+        const SF_CLIENT_ID = "3MVG9HtWXcDGV.nGf1l.e7yUGCL6M03YbhpCQMJeE6TPakwtpsaix2Id_rOBxrww5xLdQ8IAHDSZzPL_yLimb";
+        const SF_CLIENT_SECRET = "90F1FBCA412490E025F03090F7ACA12A0B33F30B365474CE87896AC908982CE2";
+
+        const EXPERIENCE_SITE_URL = "https://orgfarm-f6666eabf2-dev-ed.develop.my.site.com/acr/s";
+        const EXPERIENCE_SITE_ORIGIN = "https://orgfarm-f6666eabf2-dev-ed.develop.my.site.com";
+        const SOURCE_ORIGIN = "https://shreyashurk.github.io";
+
+        let accessToken = null;
+        let experienceWindow = null;
+        let pendingAccountId = null;
+
+        async function getAccessToken() {
+            const response = await fetch(SF_TOKEN_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "client_credentials", client_id: SF_CLIENT_ID, client_secret: SF_CLIENT_SECRET }) });
+            const responseText = await response.text();
+            let result;
+            try { result = JSON.parse(responseText) } catch (e) { throw new Error("Salesforce returned non-JSON response: " + responseText) }
+            if (!response.ok) throw new Error(result.error_description || result.error || "Unable to get Salesforce access token");
+            accessToken = result.access_token;
+            return accessToken;
+        }
+
+        async function createAccount(data) {
+            if (!accessToken) await getAccessToken();
+            let response = await fetch(SF_ENDPOINT, { method: "POST", headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(data) });
+            if (response.status === 401) {
+                accessToken = null;
+                await getAccessToken();
+                response = await fetch(SF_ENDPOINT, { method: "POST", headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(data) });
+            }
+            const result = await response.json();
+            console.log("Salesforce response:", result);
+            if (!response.ok || result.success === false) throw new Error(result.error || "Account creation failed");
+            return result;
+        }
+
+        function sendAccountId(accountId) {
+            if (!experienceWindow || experienceWindow.closed) {
+                console.error("Experience Site window is not available");
+                return;
+            }
+            console.log("Sending Account Id:", accountId);
+            experienceWindow.postMessage({ type: "PASS_VALUE", value: accountId }, EXPERIENCE_SITE_ORIGIN);
+        }
+
+        window.addEventListener("message", (event) => {
+            console.log("Message received:", event.origin, event.data);
+            if (event.origin !== EXPERIENCE_SITE_ORIGIN) return;
+            if (event.data?.type === "EXPERIENCE_SITE_READY") {
+                console.log("Experience Site is ready");
+                siteStatus.textContent = "Experience Site ready. Sending Account Id...";
+                if (pendingAccountId) sendAccountId(pendingAccountId);
+            }
+            if (event.data?.type === "VALUE_RECEIVED") {
+                console.log("Experience Site received Account Id successfully");
+                pendingAccountId = null;
+                siteStatus.textContent = "✓ Account Id sent successfully to Experience Site";
+            }
+        });
+
+        submitBtn.addEventListener("click", async () => {
+            if (!form.reportValidity()) return;
+
+            experienceWindow = window.open(EXPERIENCE_SITE_URL, "_blank");
+
+            if (!experienceWindow) {
+                statusMsg.textContent = "❌ Please allow popups for this website";
+                statusMsg.className = "status error";
+                return;
+            }
+
+            siteStatus.classList.add("show");
+
+            const data = { accountName: document.getElementById("accountName").value.trim(), industry: document.getElementById("industry").value, phone: document.getElementById("phone").value.trim() };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Creating...";
+            statusMsg.textContent = "";
+            statusMsg.className = "status";
+            recordBox.classList.remove("show");
+            recordIdElement.textContent = "";
+
+            try {
+                const result = await createAccount(data);
+                const accountId = result.id;
+                console.log("Created Account Id:", accountId);
+
+                pendingAccountId = accountId;
+
+                statusMsg.textContent = "✅ Account created successfully!";
+                statusMsg.className = "status success";
+                recordIdElement.textContent = accountId;
+                recordBox.classList.add("show");
+                siteStatus.textContent = "Waiting for Experience Site to become ready...";
+                form.reset();
+            } catch (error) {
+                console.error("Error:", error);
+                statusMsg.textContent = "❌ " + error.message;
+                statusMsg.className = "status error";
+                siteStatus.classList.remove("show");
+                if (experienceWindow && !experienceWindow.closed) experienceWindow.close();
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Create Account";
+            }
+        });
+    </script>
+</body>
+
+</html>
